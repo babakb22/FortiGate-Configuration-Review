@@ -9,7 +9,6 @@ import glob
 import logging
 import json
 from tqdm import tqdm
-from docx import Document
 import ipaddress
 
 class FortiGateCISAudit:
@@ -551,41 +550,6 @@ def setup_logging():
         ]
     )
     logging.info("Audit log initialized")
-
-def generate_config_review(template_path, output_path, replacements):
-    """
-    Opens a Word template, finds {{PLACEHOLDERS}}, replaces them with data,
-    and saves the result as a new file.
-    """
-    doc = Document(template_path)
-
-    def process_paragraph(paragraph):
-            # We assume the placeholder is unbroken (e.g., same font/style)
-            for key, value in replacements.items():
-                if key in paragraph.text:
-                    # We replace the text in the 'runs' to preserve formatting (bold/color)
-                    for run in paragraph.runs:
-                        if key in run.text:
-                            run.text = run.text.replace(key, str(value))
-
-    # ---------------------------------------------------------
-    # 1. Scan Main Body Paragraphs
-    # ---------------------------------------------------------
-    for paragraph in doc.paragraphs:
-        process_paragraph(paragraph)
-
-    # ---------------------------------------------------------
-    # 2. Scan Tables (Important for structured reports)
-    # ---------------------------------------------------------
-    for table in doc.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                for paragraph in cell.paragraphs:
-                    process_paragraph(paragraph)
-
-    # Save the final report
-    doc.save(output_path)
-    print(f"✅ Report successfully generated: {output_path}")
 
 def main():
     # Set up logging
