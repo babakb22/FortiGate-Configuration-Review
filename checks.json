@@ -1,0 +1,506 @@
+[
+    {
+        "id": "1.1.1",
+        "description": "Ensure 'admin-timeout' is set to 5 minutes or less",
+        "logic": {
+            "type": "admin_timeout_grep",
+            "section": "config system global",
+            "patterns": ["admintimeout"],
+            "vdom": false
+        },
+        "result_message": {
+            "pass": "Admin timeout is set to 5 minutes or less",
+            "fail": "Admin timeout is not properly configured"
+        },
+        "fix_commands": "config system global\n    set admintimeout 5\nend"
+    },
+    {
+        "id": "1.1.3",
+        "description": "Ensure SSH v1 is disabled",
+        "logic": {
+            "type": "negated_grep",
+            "section": "config system global",
+            "vdom": false,
+            "patterns": ["set admin-ssh-v1 enable"]
+        },
+        "result_message": {
+            "pass": "SSH v1 is disabled",
+            "fail": "SSH v1 is enabled"
+        },
+        "fix_commands": "config system global\n    set admin-ssh-v1 disable\nend"
+    },
+    {
+        "id": "1.1.4",
+        "description": "Ensure concurrent admin sessions are not allowed.",
+        "logic": {
+            "type": "complex_grep",
+            "section": "config system global",
+            "patterns": [
+                {"pattern": "set admin-concurrent disable", "negated": false}
+            ]
+        },
+        "result_message": {
+            "pass": "Concurrent admin sessions limited to 1",
+            "fail": "Concurrent admin sessions not properly limited"
+        },
+        "fix_commands": "config system global\n    set admin-concurrent-sessions 1\nend"
+    },
+    {
+        "id": "1.1.5",
+        "description": "Ensure default 'admin' secure port is changed",
+        "logic": {
+            "type": "negated_grep",
+            "section": "config system global",
+            "vdom": false,
+            "patterns": ["set admin-sport 443$"]
+        },
+        "result_message": {
+            "pass": "Default admin secure port is changed",
+            "fail": "Default admin secure port (443) is still in use"
+        },
+        "fix_commands": "config system global\n    set admin-sport 8443\nend"
+    },
+    {
+        "id": "2.2.1",
+        "description": "Ensure at least two NTP servers are configured",
+        "logic": {
+            "type": "count_grep",
+            "section": "config system ntp",
+            "pattern": "edit ",
+            "min_count": 2
+        },
+        "result_message": {
+            "pass": "At least two NTP servers are configured",
+            "fail": "Less than two NTP servers are configured"
+        },
+        "fix_commands": "config system ntp\n    set ntpsync enable\n    set type custom\n    config ntpserver\n    edit 1\n    set server 0.pool.ntp.org\nnext    set server 1.pool.ntp.org\nnext\nend\nend"
+    },
+    {
+        "id": "1.2.1",
+        "description": "Ensure trusted hosts are configured for all admin accounts",
+        "logic": {
+            "type": "mapped_grep",
+            "section": "config system admin",
+            "vdom": false,
+            "patterns": ["set trusthost"]
+        },
+        "result_message": {
+            "pass": "All users have trusted hosts defined.",
+            "fail": "At least one user does not have trusted hosts defined."
+        },
+        "fix_commands": "config system admin\n    edit \"admin\"\n        set trusthost 192.168.1.0/24 10.0.0.0/24\n    next\nend"
+    },
+    {
+        "id": "1.2.2",
+        "description": "Ensure password policy is enabled and configured properly",
+        "logic": {
+            "type": "pass_policy_grep",
+            "section": "config system password-policy",
+            "patterns": [
+                "set status enable",
+                "set apply-to admin-password ipsec-preshared-key",
+                "set expire-status enable",
+                "set min-lower-case-letter",
+                "set min-upper-case-letter",
+                "set min-non-alphanumeric",
+                "set min-number"
+            ]
+        },
+        "result_message": {
+            "pass": "Password policy is properly configured",
+            "fail": "Password policy is not properly configured"
+        },
+        "fix_commands": "config system password-policy\n    set status enable\n    set minimum-length 8\n    set must-contain upper-case-letter lower-case-letter number special-character\n    set change-4-characters enable\n    set expire-status enable\n    set expire-day 90\nend"
+    },
+    {
+        "id": "1.2.4",
+        "description": "Ensure administrator account lockout is enabled",
+        "logic": {
+            "type": "admin_lockout_grep",
+            "section": "config system global",
+            "patterns": [
+                         "admin-lockout-threshold", 
+                         "admin-lockout-duration"
+                        ]
+        },
+        "result_message": {
+            "pass": "Administrator account lockout is configured properly",
+            "fail": "Review administrator account lockout configuration"
+        },
+        "fix_commands": "config system global\n    set admin-lockout-threshold 3\n    set admin-lockout-duration 300\nend"
+    },
+    {
+        "id": "1.3.2",
+        "description": "Ensure default admin account is removed or renamed.",
+        "logic": {
+            "type": "negated_grep",
+            "section": "config system admin",
+            "vdom": false,
+            "patterns": ["edit \"admin\""]
+        },
+        "result_message": {
+            "pass": "Default admin account does not exist",
+            "fail": "Please remove default admin account"
+        },
+        "fix_commands": "create a new super_admin account and after testing it successfully, remove or rename the default admin account."
+    },
+    {
+        "id": "2.1.1",
+        "description": "Ensure strong encryption is used",
+        "logic": {
+            "type": "negated_grep",
+            "section": "config system global",
+            "vdom": false,
+            "patterns": ["set strong-crypto"]   
+        },
+        "result_message": {
+            "pass": "Strong encryption is enabled",
+            "fail": "Strong encryption is not enabled"
+        },
+        "fix_commands": "config system global\n    set strong-crypto enable\nend"
+    },
+    {
+        "id": "2.1.2",
+        "description": "Ensure only approved SSL/TLS versions are used",
+        "logic": {
+            "type": "ssl-min-proto_grep",
+            "section": "config system global",
+            "patterns": [
+                {"pattern": "TLSv1-3", "negated": true},
+                {"pattern": "SSLv3", "negated": false},
+                {"pattern": "TLSv1$", "negated": false},
+                {"pattern": "TLSv1-1", "negated": false}
+            ]
+        },
+        "result_message": {
+            "pass": "Only approved SSL/TLS versions are enabled",
+            "fail": "Insecure SSL/TLS versions are enabled"
+        },
+        "fix_commands": "config system global\n    set ssl-min-proto-version tls1-2\nend"
+    },
+    {
+        "id": "2.1.10",
+        "description": "Ensure management GUI listens on secure TLS version",
+        "logic": {
+            "type": "negated_grep",
+            "section": "config system global",
+            "vdom": false,
+            "patterns": ["tlsv1-1"]
+        },
+        "result_message": {
+            "pass": "Secure TLS on Management GUI is enabled",
+            "fail": "Secure TLS on Management GUI is not enabled"
+        },
+        "fix_commands": "config system global\n    set admin-https-ssl-versions tlsv1-3\nend"
+    },
+    {
+        "id": "2.2.2",
+        "description": "Ensure administrative access via HTTPS only",
+        "logic": {
+            "type": "complex_grep",
+            "section": "config system interface",
+            "patterns": [
+                {"pattern": "http ", "negated": true},
+                {"pattern": "http$", "negated": true},
+                {"pattern": "telnet", "negated": true},
+                {"pattern": "telnet$", "negated": true}
+            ]
+        },
+        "result_message": {
+            "pass": "Administrative access is only provided by secure methods",
+            "fail": "Administrative access uses unsecure methods"
+        },
+        "fix_commands": "config system interface\n    edit \"port1\"\n        set allowaccess https\n        unset allowaccess http\n    next\nend"
+    },
+    {
+        "id": "2.3.1",
+        "description": "Check DNS server configuration",
+        "logic": {
+            "type": "dns_grep",
+            "section": "config system dns",
+            "patterns": ["set primary", "set secondary"]
+        },
+        "result_message": {
+            "pass": "DNS server is configured and is using at least one private IP address",
+            "fail": "DNS server is not configured or is not using any private addresses"
+        },
+        "fix_commands": "config system dns\n    set primary 8.8.8.8\n    set secondary 8.8.4.4\nend"
+    },
+    {
+        "id": "2.3.2",
+        "description": "Check intra-zone traffic configuration",
+        "logic": {
+            "type": "negated_grep",
+            "section": "config system zone",
+            "vdom": true,
+            "patterns": ["set intrazone allow"]
+        },
+        "result_message": {
+            "pass": "Intra-zone traffic is not allowed",
+            "fail": "Intra-zone traffic is always allowed. This might be superpermissive."
+        },
+        "fix_commands": "config system zone\n    edit \"ZONE1\"\n        set intrazone deny\n    next\nend"
+    },
+    {
+        "id": "2.3.4",
+        "description": "Check pre-login banner configuration",
+        "logic": {
+            "type": "simple_grep",
+            "section": "config system global",
+            "patterns": ["set pre-login-banner enable"]
+        },
+        "result_message": {
+            "pass": "Pre-Login Banner is set",
+            "fail": "Pre-Login Banner is not set"
+        },
+        "fix_commands": "config system global\n    set pre-login-banner enable\nend\nconfig system replacemsg admin \"pre-login-banner\"\n    set buffer \"Unauthorized access prohibited\"\nend"
+    },
+    {
+        "id": "2.3.5",
+        "description": "Check post-login banner configuration",
+        "logic": {
+            "type": "simple_grep",
+            "section": "config system global",
+            "patterns": ["set post-login-banner enable"]
+        },
+        "result_message": {
+            "pass": "Post-Login Banner is set",
+            "fail": "Post-Login Banner is not set"
+        },
+        "fix_commands": "config system global\n    set post-login-banner enable\nend\nconfig system replacemsg admin \"post-login-banner\"\n    set buffer \"Authorized users only\"\nend"
+    },
+    {
+        "id": "2.3.6",
+        "description": "Check timezone configuration",
+        "logic": {
+            "type": "any_grep",
+            "section": "config system global",
+            "patterns": ["set timezone \"Australia/Sydney\"", "set timezone 80" ]
+        },
+        "result_message": {
+            "pass": "Timezone is properly configured",
+            "fail": "Timezone is not properly configured"
+        },
+        "fix_commands": "config system global\n    set timezone 04\nend"
+    },
+    {
+        "id": "2.3.9",
+        "description": "Check USB firmware and configuration installation",
+        "logic": {
+            "type": "negated_grep",
+            "section": "config system auto-install", 
+            "vdom": false,
+            "patterns": ["set auto-install-config enable", "set auto-install-image enable"]
+        },
+        "result_message": {
+            "pass": "USB Firmware and configuration installation is disabled",
+            "fail": "USB Firmware or configuration installation is enabled"
+        },
+        "fix_commands": "config system global\n    config system auto-install\n    set auto-install-config disable\n    set auto-install-image disable\nend\nend"
+    },
+    {
+        "id": "2.3.10",
+        "description": "Check global strong encryption settings",
+        "logic": {
+            "type": "negated_grep",
+            "section": "config system global",
+            "vdom": false,
+            "patterns": ["set strong-crypto disable"]
+        },
+        "result_message": {
+            "pass": "Global Strong Encryption is enabled",
+            "fail": "Global Strong Encryption is not enabled"
+        },
+        "fix_commands": "config system global\n    set strong-crypto enable\nend"
+    },
+    {
+        "id": "2.3.13",
+        "description": "Check SNMPv3 configuration",
+        "logic": {
+            "type": "simple_grep",
+            "section": "config system snmp sysinfo",
+            "patterns": ["set status enable"]
+        },
+        "result_message": {
+            "pass": "Only SNMPv3 is enabled",
+            "fail": "Only SNMPv3 is not enabled"
+        },
+        "fix_commands": "config system snmp sysinfo\n    set status enable\nend"
+    },
+    {
+        "id": "2.99.001",
+        "description": "Make sure there are no SNMP community strings",
+        "logic": {
+            "type": "negated_grep",
+            "section": "config system snmp community",
+            "vdom": false,
+            "patterns": ["edit"]
+        },
+        "result_message": {
+            "pass": "No community strings configured.",
+            "fail": "Community strings found. Please review the configuration."
+        },
+        "fix_commands": "config system snmp community\n    delete 1\nend"
+    },
+    {
+        "id": "2.99.002",
+        "description": "Check SNMPv3 user authentication and encryption",
+        "logic": {
+            "type": "mapped_grep",
+            "section": "config system snmp user",
+            "vdom": false,
+            "patterns": ["set security-level auth-priv"]
+        },
+        "result_message": {
+            "pass": "authentication and encryption has been enabled.",
+            "fail": "authentication and/or encryption have not been enabled. Please review the configuration."
+        },
+        "fix_commands": "config system snmp user\n    edit <user>\n    set security-level auth-priv\nnext\nend"
+    },
+    {
+        "id": "2.99.003",
+        "description": "Check SNMPv3 is using a strong encryption algorithm.",
+        "logic": {
+            "type": "snmp_sec_grep",
+            "section": "config system snmp user",
+            "patterns": [
+                "set security-level auth-priv",
+                "set auth-proto"
+            ]
+        },
+        "result_message": {
+            "pass": "both authentication and encryption are using strong algorithms.",
+            "fail": "authentication or encryption are not using strong algorithms. Please review the configuration."
+        },
+        "fix_commands": "config system snmp user\n    edit <user>\n    set auth-proto sha256\n    set priv-proto sha256\nnext\nend"
+    }, 
+    {
+        "id": "2.3.15",
+        "description": "Check High Availability configuration",
+        "logic": {
+            "type": "simple_grep",
+            "section": "config system ha",
+            "patterns": ["set mode a-"]
+        },
+        "result_message": {
+            "pass": "High Availability configuration is enabled",
+            "fail": "High Availability configuration is not enabled"
+        },
+        "fix_commands": "config system ha\n    set group-id 1\n    set mode a-p\n    set hbdev \"port1\" 50\nend"
+    },
+    {
+        "id": "2.3.16",
+        "description": "Check High Availability configuration",
+        "logic": {
+            "type": "simple_grep",
+            "section": "config system ha",
+            "patterns": ["set monitor"]
+        },
+        "result_message": {
+            "pass": "'Monitor Interfaces' for High Availability devices is enabled",
+            "fail": "'Monitor Interfaces' for High Availability devices is not enabled"
+        },
+        "fix_commands": "config system ha\n    set monitor \"port1\" \"port2\"\nend"
+    },
+    {
+        "id": "2.3.23",
+        "description": "Check admin HTTPS redirect configuration",
+        "logic": {
+            "type": "negated_grep",
+            "section": "config system global", 
+            "vdom": false,
+            "patterns": ["set admin-https-redirect disable"]
+        },
+        "result_message": {
+            "pass": "Admin HTTPS redirect is enabled",
+            "fail": "Admin HTTPS redirect is not enabled. Review the configuration."
+        },
+        "fix_commands": "config system global\n    set admin-https-redirect disable\nend"
+    },
+    {
+        "id": "2.3.25",
+        "description": "Check SSH port configuration",
+        "logic": {
+            "type": "simple_grep",
+            "section": "config system global",
+            "patterns": ["set admin-ssh-port"]
+        },
+        "result_message": {
+            "pass": "SSH port is not using default port 22",
+            "fail": "SSH port is using default port 22"
+        },
+        "fix_commands": "config system global\n    set admin-ssh-port 2222\nend"
+    },
+    {
+        "id": "2.99.004",
+        "description": "Check HTTPS port configuration",
+        "logic": {
+            "type": "simple_grep",
+            "section": "config system global",
+            "patterns": ["set admin-sport"]
+        },
+        "result_message": {
+            "pass": "HTTPS is not using default port 443",
+            "fail": "HTTPS is using default port 443"
+        },
+        "fix_commands": "config system global\n    set admin-sport 10443\nend"
+    },
+    {
+        "id": "2.3.26",
+        "description": "Check syslog server configuration",
+        "logic": {
+            "type": "simple_grep",
+            "section": "config log syslogd setting",
+            "patterns": ["set status enable"]
+        },
+        "result_message": {
+            "pass": "Syslog server is configured",
+            "fail": "Syslog server is not configured"
+        },
+        "fix_commands": "config log syslogd setting\n    set status enable\n    set server \"192.168.1.100\"\nend"
+    },
+    {
+        "id": "2.3.28",
+        "description": "Check FortiAnalyzer logging configuration",
+        "logic": {
+            "type": "simple_grep",
+            "section": "config log fortianalyzer setting",
+            "patterns": ["set status enable"]
+        },
+        "result_message": {
+            "pass": "FortiAnalyzer logging is enabled",
+            "fail": "FortiAnalyzer logging is not enabled"
+        },
+        "fix_commands": "config log fortianalyzer setting\n    set status enable\n    set server \"192.168.1.200\"\nend"
+    },
+    {
+        "id": "2.3.30",
+        "description": "Check BGP neighbor authentication",
+        "logic": {
+            "type": "mapped_grep",
+            "section": "config router bgp", 
+            "vdom": true,
+            "patterns": ["set password"]
+        },
+        "result_message": {
+            "pass": "BGP neighbor authentication is configured",
+            "fail": "BGP neighbor authentication is not configured"
+        },
+        "fix_commands": "config router bgp\n    config neighbor\n        edit \"192.168.1.1\"\n            set password ********\n        next\n    end\nend"
+    },
+{
+        "id": "2.99.004",
+        "description": "Check SSL VPN Non Standard Port",
+        "logic": {
+            "type": "negated_grep",
+            "section": "config vpn ssl settings", 
+            "vdom": true,
+            "patterns": ["set port 443$"]
+        },
+        "result_message": {
+            "pass": "Non-standard SSL VPN port is configured or no port specified",
+            "fail": "Standard SSL VPN port (443) is configured"
+        },
+        "fix_commands": "config vpn ssl settings\n    set port 1443\nend"
+    }
+]
