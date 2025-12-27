@@ -24,7 +24,7 @@ This tool automates the process of checking FortiGate firewall configurations ag
 - Track compliance with CIS security standards
 
 ## Implementations
-This tool is available in Python. (`fortigate_cis_checker.py`)
+This tool is available in Python. (`fortigate-config-review.py`)
 
 Choose the implementation that best suits your environment and requirements.
 
