@@ -12,10 +12,10 @@ from tqdm import tqdm
 import ipaddress
 
 class FortiGateCISAudit:
-    def __init__(self, config_file):
+    def __init__(self, config_file, audit_report_path):
         self.config_file = config_file
         # Create audit_reports folder if it doesn't exist
-        self.reports_dir = "audit_reports"
+        self.reports_dir = audit_report_path + "\\audit_reports"
         if not os.path.exists(self.reports_dir):
             os.makedirs(self.reports_dir)
         
@@ -534,9 +534,9 @@ class FortiGateCISAudit:
             logging.error(f"Error generating HTML report for {self.html_file}: {e}")
             print(f"Error generating HTML report for {self.html_file}: {e}")
 
-def setup_logging():
+def setup_logging(audit_report_path):
     """Set up logging to a unique file in audit_reports"""
-    reports_dir = "audit_reports"
+    reports_dir = audit_report_path + "\\audit_reports"
     if not os.path.exists(reports_dir):
         os.makedirs(reports_dir)
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -552,28 +552,31 @@ def setup_logging():
     logging.info("Audit log initialized")
 
 def main():
-    # Set up logging
-    setup_logging()
-    
-    if len(sys.argv) != 2:
-        logging.error("Invalid usage. Usage: python3 FortiGateCISAudit.py <config_folder>")
-        print("Usage: python3 FortiGateCISAudit.py <config_folder>")
+
+    if len(sys.argv) != 3:
+        logging.error("Invalid usage. Usage: python3 fortigate-config-review.py <config_folder> <audit_report_folder>")
+        print("Usage: python3 fortigate-config-review.py <config_folder>  <audit_report_folder>")
         sys.exit(1)
 
     config_folder = sys.argv[1]
+    audit_report_path = sys.argv[2]
     
-    # Check if folder exists
+    # Check if config folder exists
     if not os.path.isdir(config_folder):
         logging.error(f"{config_folder} is not a valid directory")
         print(f"Error: {config_folder} is not a valid directory")
         sys.exit(1)
 
-    # Get all .txt and .conf files in the folder
-    """"
-    config_files = glob.glob(os.path.join(config_folder, "*.txt")) + \
-                   glob.glob(os.path.join(config_folder, "*.conf"))
+    # Check if audit report path is valid
+    if not os.path.isdir(audit_report_path):
+        logging.error(f"{audit_report_path} is not a valid directory")
+        print(f"Error: {audit_report_path} is not a valid directory")
+        sys.exit(1)
 
-"""
+    # Set up logging
+    setup_logging(audit_report_path)
+
+    # Get the .conf file from the folder
     config_file = ''.join(glob.glob(os.path.join(config_folder, "*.conf")))
     
     if not config_file:
@@ -587,7 +590,7 @@ def main():
 
     # Load checks from checks.json
     # auditor = FortiGateCISAudit(config_files[0])  # Temporary instance to load checks
-    auditor = FortiGateCISAudit(config_file) 
+    auditor = FortiGateCISAudit(config_file, audit_report_path) 
 
     checks = auditor.load_checks()
 
@@ -596,7 +599,7 @@ def main():
     # for config_file in tqdm(config_files, desc="Processing files", unit="file"):
     
     logging.info(f"Processing file: {config_file}")
-    auditor = FortiGateCISAudit(config_file)
+    auditor = FortiGateCISAudit(config_file, audit_report_path)
     
     # Skip if config is invalid
     if not auditor.config_content:
