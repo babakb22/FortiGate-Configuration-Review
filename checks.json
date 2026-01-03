@@ -49,16 +49,16 @@
         "id": "2.5.7",
         "description": "Ensure default 'admin' secure port is changed",
         "logic": {
-            "type": "negated_grep",
+            "type": "admin-sport_grep",
             "section": "config system global",
             "vdom": false,
-            "patterns": ["set admin-sport 443$"]
+            "patterns": ["set admin-sport", "set admin-port", "set admin-ssh-port"]
         },
         "result_message": {
-            "pass": "Default admin secure port is changed",
-            "fail": "Default admin secure port (443) is still in use"
+            "pass": "Default admin secure ports are changed",
+            "fail": "Default admin secure ports (443) are still in use"
         },
-        "fix_commands": "config system global\n    set admin-sport 8443\nend"
+        "fix_commands": "config system global\n    set admin-sport 8443\n    set admin-port 8085\n    set admin-ssh-port 2022\nend"
     },
     {
         "id": "2.1.4",
@@ -145,21 +145,6 @@
         "fix_commands": "create a new super_admin account and after testing it successfully, remove or rename the default admin account."
     },
     {
-        "id": "2.1.9",
-        "description": "Ensure strong encryption is used",
-        "logic": {
-            "type": "negated_grep",
-            "section": "config system global",
-            "vdom": false,
-            "patterns": ["set strong-crypto"]   
-        },
-        "result_message": {
-            "pass": "Strong encryption is enabled",
-            "fail": "Strong encryption is not enabled"
-        },
-        "fix_commands": "config system global\n    set strong-crypto enable\nend"
-    },
-    {
         "id": "2.1.10",
         "description": "Ensure only approved SSL/TLS versions are used",
         "logic": {
@@ -192,6 +177,27 @@
             "fail": "Secure TLS on Management GUI is not enabled"
         },
         "fix_commands": "config system global\n    set admin-https-ssl-versions tlsv1-3\nend"
+    },
+    {
+        "id": "2.1.10",
+		"label": "{{SSLVPN_TLS_MIN_PROTO}}",
+        "description": "Ensure minimum acceptable TLS versions are used for SSL VPN. ",
+        "logic": {
+            "type": "sslvpn-ssl-min-proto_grep",
+            "section": "config vpn ssl settings",
+            "vdom": true,
+            "patterns": [
+                {"pattern": "tls1-3", "negated": true},
+                {"pattern": "tls1-2", "negated": true},
+                {"pattern": "tls1-1", "negated": false},
+                {"pattern": "tls1-0", "negated": false}
+            ]
+        },
+        "result_message": {
+            "pass": "SSLVPN uses minimum accepted version of TLS.",
+            "fail": "Insecure SSL/TLS versions are accepted for SSLVPN. Please review the configuration."
+        },
+        "fix_commands": "config vpn ssl setting\n    set ssl-min-proto-ver tls1-2\nend"
     },
     {
         "id": "2.4.5",
@@ -416,34 +422,6 @@
             "fail": "Admin HTTPS redirect is not enabled. Review the configuration."
         },
         "fix_commands": "config system global\n    set admin-https-redirect disable\nend"
-    },
-    {
-        "id": "2.5.7",
-        "description": "Check SSH port configuration",
-        "logic": {
-            "type": "simple_grep",
-            "section": "config system global",
-            "patterns": ["set admin-ssh-port"]
-        },
-        "result_message": {
-            "pass": "SSH port is not using default port 22",
-            "fail": "SSH port is using default port 22"
-        },
-        "fix_commands": "config system global\n    set admin-ssh-port 2222\nend"
-    },
-    {
-        "id": "2.5.7",
-        "description": "Check HTTPS port configuration",
-        "logic": {
-            "type": "simple_grep",
-            "section": "config system global",
-            "patterns": ["set admin-sport"]
-        },
-        "result_message": {
-            "pass": "HTTPS is not using default port 443",
-            "fail": "HTTPS is using default port 443"
-        },
-        "fix_commands": "config system global\n    set admin-sport 10443\nend"
     },
     {
         "id": "7.3.1",

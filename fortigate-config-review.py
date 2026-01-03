@@ -235,6 +235,28 @@ class FortiGateCISAudit:
                     return f"PASS: {result_message['pass']}"
                 return f"FAIL: {result_message['fail']}"
 
+            elif logic["type"] == "admin-sport_grep":
+                
+                configlet = self.get_fortigate_section(logic["section"])
+                admin_sport_is_secure = False
+                admin_port_is_secure = False
+                admin_ssh_port_is_secure = False
+
+                conditions = False
+
+                lines = configlet.splitlines()
+                for line in lines:
+                    if "set admin-sport" in line: 
+                        admin_sport_is_secure = True
+                    elif "set admin-port" in line:
+                        admin_port_is_secure = True
+                    elif "set admin-ssh-port" in line:
+                        admin_ssh_port_is_secure = True
+
+                if (admin_sport_is_secure) and (admin_port_is_secure) and (admin_ssh_port_is_secure):
+                    return f"PASS: {result_message['pass']}"
+                return f"FAIL: {result_message['fail']}"
+
             elif logic["type"] == "ssl-min-proto_grep":
                 conditions = False
                 configlet = self.get_fortigate_section(logic["section"])
@@ -253,6 +275,20 @@ class FortiGateCISAudit:
                 conditions = False
                 configlet = self.get_fortigate_section(logic["section"])
                 if not self.grep_config("set admin-https-ssl-versions", configlet):
+                    conditions = True
+                else:
+                    for p in logic["patterns"]:
+                        if self.grep_config(p["pattern"], configlet) and p["negated"]:
+                            conditions = True
+                
+                if (conditions):
+                    return f"PASS: {result_message['pass']}"
+                return f"FAIL: {result_message['fail']}"
+
+            elif logic["type"] == "sslvpn-ssl-min-proto_grep":
+                conditions = False
+                configlet = self.get_fortigate_section(logic["section"])
+                if not self.grep_config("set ssl-min-proto-version", configlet):
                     conditions = True
                 else:
                     for p in logic["patterns"]:
